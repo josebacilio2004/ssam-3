@@ -200,7 +200,7 @@ if (couplePhoto) {
     });
 }
 
-// ===== SISTEMA DE DESBLOQUEO BASADO EN HORA =====
+// ===== SISTEMA DE CAJAS DE REGALO CON DESBLOQUEO POR HORA =====
 
 function checkAndUnlockActivities() {
     const now = new Date();
@@ -219,23 +219,22 @@ function checkAndUnlockActivities() {
         const unlockTotalMinutes = (unlockHour * 60) + unlockMinute;
         const currentTotalMinutes = (currentHour * 60) + currentMinute;
 
-        console.log(`Actividad: ${item.getAttribute('data-time')}, Desbloqueo: ${unlockHour}:${unlockMinute}, Bloqueado: ${currentTotalMinutes < unlockTotalMinutes}`);
+        const isUnlocked = currentTotalMinutes >= unlockTotalMinutes;
+        const isOpened = item.classList.contains('opened');
 
-        if (currentTotalMinutes >= unlockTotalMinutes) {
-            // Desbloquear
-            if (item.classList.contains('locked')) {
-                // Remover clase locked y agregar unlocked con efecto
+        console.log(`Actividad: ${item.getAttribute('data-time')}, Desbloqueo: ${unlockHour}:${unlockMinute}, Desbloqueado: ${isUnlocked}, Abierto: ${isOpened}`);
+
+        if (isUnlocked && !isOpened) {
+            // Hacer la caja clickeable
+            if (!item.classList.contains('unlocked')) {
                 item.classList.remove('locked');
                 item.classList.add('unlocked');
 
-                // Crear efecto de partículas de desbloqueo
-                createUnlockParticles(item);
-            } else if (!item.classList.contains('unlocked')) {
-                // Si no tiene ninguna clase, es la primera vez
-                item.classList.add('unlocked');
+                // Mostrar notificación de que ahora puede abrir
+                showUnlockNotification(item.getAttribute('data-time'));
             }
-        } else {
-            // Bloquear
+        } else if (!isUnlocked && !isOpened) {
+            // Mantener bloqueado
             if (!item.classList.contains('locked')) {
                 item.classList.add('locked');
                 item.classList.remove('unlocked');
@@ -244,62 +243,20 @@ function checkAndUnlockActivities() {
     });
 }
 
-function createUnlockParticles(element) {
-    const rect = element.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + 40; // Posición del ícono
-
-    // Crear partículas de estrellas
-    const particles = ['✨', '⭐', '💫', '🌟', '💚'];
-
-    for (let i = 0; i < 10; i++) {
-        setTimeout(() => {
-            const particle = document.createElement('div');
-            particle.textContent = particles[Math.floor(Math.random() * particles.length)];
-            particle.style.position = 'fixed';
-            particle.style.left = centerX + 'px';
-            particle.style.top = centerY + 'px';
-            particle.style.fontSize = '1.5rem';
-            particle.style.pointerEvents = 'none';
-            particle.style.zIndex = '10000';
-
-            const angle = (Math.PI * 2 * i) / 10;
-            const distance = 100;
-            const endX = centerX + Math.cos(angle) * distance;
-            const endY = centerY + Math.sin(angle) * distance;
-
-            particle.style.animation = 'none';
-            document.body.appendChild(particle);
-
-            // Animar con transiciones
-            setTimeout(() => {
-                particle.style.transition = 'all 1s ease-out';
-                particle.style.left = endX + 'px';
-                particle.style.top = endY + 'px';
-                particle.style.opacity = '0';
-                particle.style.transform = 'scale(1.5)';
-            }, 10);
-
-            setTimeout(() => {
-                particle.remove();
-            }, 1100);
-        }, i * 50);
-    }
-
-    // Sonido de desbloqueo (visual feedback adicional)
+function showUnlockNotification(activityTime) {
     const notification = document.createElement('div');
-    notification.textContent = '🎉 ¡Actividad desbloqueada! 🎉';
+    notification.textContent = `🎁 ¡Regalo disponible para ${activityTime}!`;
     notification.style.position = 'fixed';
     notification.style.top = '20px';
     notification.style.left = '50%';
     notification.style.transform = 'translateX(-50%)';
-    notification.style.background = 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)';
+    notification.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)';
     notification.style.color = 'white';
     notification.style.padding = '1rem 2rem';
     notification.style.borderRadius = '50px';
-    notification.style.fontSize = '1.2rem';
+    notification.style.fontSize = '1.1rem';
     notification.style.fontWeight = 'bold';
-    notification.style.boxShadow = '0 4px 20px rgba(74, 222, 128, 0.5)';
+    notification.style.boxShadow = '0 4px 20px rgba(251, 191, 36, 0.5)';
     notification.style.zIndex = '10001';
     notification.style.animation = 'slideDown 0.5s ease-out';
 
@@ -310,8 +267,186 @@ function createUnlockParticles(element) {
         notification.style.opacity = '0';
         notification.style.transform = 'translateX(-50%) translateY(-20px)';
         setTimeout(() => notification.remove(), 500);
-    }, 2000);
+    }, 3000);
 }
+
+function openGiftBox(item) {
+    // Marcar como abierto
+    item.classList.add('opened');
+    item.classList.remove('unlocked');
+
+    const giftContainer = item.querySelector('.gift-box-container');
+    const content = item.querySelector('.timeline-content');
+
+    // Crear explosión de confeti de regalo
+    const rect = giftContainer.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    createGiftConfetti(centerX, centerY);
+
+    // Esperar a que la animación de apertura termine antes de mostrar contenido
+    setTimeout(() => {
+        // Ocultar la caja de regalo
+        giftContainer.style.opacity = '0';
+        giftContainer.style.transform = 'scale(0)';
+        giftContainer.style.transition = 'all 0.5s ease';
+
+        setTimeout(() => {
+            giftContainer.style.display = 'none';
+
+            // Mostrar el contenido con animación
+            content.style.display = 'block';
+            content.style.opacity = '0';
+            content.style.transform = 'scale(0.8)';
+
+            setTimeout(() => {
+                content.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                content.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }, 500);
+    }, 800);
+
+    // Sonido de celebración (notificación visual)
+    const celebration = document.createElement('div');
+    celebration.textContent = '🎉 ¡Sorpresa! 🎉';
+    celebration.style.position = 'fixed';
+    celebration.style.top = '50%';
+    celebration.style.left = '50%';
+    celebration.style.transform = 'translate(-50%, -50%)';
+    celebration.style.fontSize = '3rem';
+    celebration.style.fontWeight = 'bold';
+    celebration.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+    celebration.style.WebkitBackgroundClip = 'text';
+    celebration.style.backgroundClip = 'text';
+    celebration.style.WebkitTextFillColor = 'transparent';
+    celebration.style.zIndex = '10002';
+    celebration.style.animation = 'celebrationPop 1.5s ease-out forwards';
+    celebration.style.pointerEvents = 'none';
+    celebration.style.textShadow = '0 0 20px rgba(240, 147, 251, 0.5)';
+
+    document.body.appendChild(celebration);
+
+    setTimeout(() => {
+        celebration.remove();
+    }, 1500);
+}
+
+// Agregar estilos de animación celebration
+const celebrationStyle = document.createElement('style');
+celebrationStyle.textContent = `
+    @keyframes celebrationPop {
+        0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0);
+        }
+        50% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+        100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+`;
+document.head.appendChild(celebrationStyle);
+
+function createGiftConfetti(x, y) {
+    const confettiItems = ['🎊', '🎉', '✨', '⭐', '💖', '💝', '💕', '🌟', '💫', '🎈'];
+
+    for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.textContent = confettiItems[Math.floor(Math.random() * confettiItems.length)];
+            confetti.style.position = 'fixed';
+            confetti.style.left = x + 'px';
+            confetti.style.top = y + 'px';
+            confetti.style.fontSize = (Math.random() * 1.5 + 1) + 'rem';
+            confetti.style.pointerEvents = 'none';
+            confetti.style.zIndex = '10000';
+
+            const angle = (Math.PI * 2 * i) / 30;
+            const distance = Math.random() * 150 + 100;
+            const endX = x + Math.cos(angle) * distance;
+            const endY = y + Math.sin(angle) * distance;
+
+            document.body.appendChild(confetti);
+
+            setTimeout(() => {
+                confetti.style.transition = 'all 1.5s ease-out';
+                confetti.style.left = endX + 'px';
+                confetti.style.top = endY + 'px';
+                confetti.style.opacity = '0';
+                confetti.style.transform = `rotate(${Math.random() * 720}deg)`;
+            }, 10);
+
+            setTimeout(() => {
+                confetti.remove();
+            }, 1600);
+        }, i * 30);
+    }
+}
+
+// Agregar event listeners a las cajas de regalo
+function setupGiftBoxListeners() {
+    const timelineItems = document.querySelectorAll('.timeline-item');
+
+    timelineItems.forEach(item => {
+        const giftContainer = item.querySelector('.gift-box-container');
+
+        if (giftContainer) {
+            giftContainer.addEventListener('click', function (e) {
+                // Solo abrir si está desbloqueado y no ha sido abierto
+                if (item.classList.contains('unlocked') && !item.classList.contains('opened')) {
+                    openGiftBox(item);
+                } else if (item.classList.contains('locked')) {
+                    // Efecto de shake si está bloqueado
+                    this.style.animation = 'none';
+                    setTimeout(() => {
+                        this.style.animation = 'shake 0.5s ease-in-out';
+                    }, 10);
+
+                    // Mostrar mensaje temporal
+                    const hint = document.createElement('div');
+                    const unlockHour = item.getAttribute('data-unlock-hour');
+                    const unlockMinute = item.getAttribute('data-unlock-minute') || '00';
+                    hint.textContent = `🔒 Espera hasta las ${unlockHour}:${unlockMinute.padStart(2, '0')}`;
+                    hint.style.position = 'fixed';
+                    hint.style.left = e.clientX + 'px';
+                    hint.style.top = (e.clientY - 50) + 'px';
+                    hint.style.background = 'rgba(148, 163, 184, 0.9)';
+                    hint.style.color = 'white';
+                    hint.style.padding = '0.5rem 1rem';
+                    hint.style.borderRadius = '20px';
+                    hint.style.fontSize = '0.9rem';
+                    hint.style.fontWeight = 'bold';
+                    hint.style.zIndex = '10001';
+                    hint.style.pointerEvents = 'none';
+                    hint.style.animation = 'floatUp 2s ease-out forwards';
+
+                    document.body.appendChild(hint);
+
+                    setTimeout(() => {
+                        hint.remove();
+                    }, 2000);
+                }
+            });
+        }
+    });
+}
+
+// Agregar animación shake
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+`;
+document.head.appendChild(shakeStyle);
 
 // Agregar animación de slideDown
 const slideDownStyle = document.createElement('style');
@@ -338,8 +473,9 @@ continueBtn.addEventListener('click', function () {
     // Efecto de confeti
     createConfetti();
 
-    // Verificar y desbloquear actividades
+    // Configurar listeners de cajas de regalo
     setTimeout(() => {
+        setupGiftBoxListeners();
         checkAndUnlockActivities();
     }, 500);
 
@@ -349,6 +485,7 @@ continueBtn.addEventListener('click', function () {
 
 // También verificar si ya estamos en la pantalla de actividades (por si se recarga)
 if (activitiesScreen.classList.contains('active')) {
+    setupGiftBoxListeners();
     checkAndUnlockActivities();
     setInterval(checkAndUnlockActivities, 60000);
 }
